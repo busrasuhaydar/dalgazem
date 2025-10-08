@@ -86,7 +86,7 @@
             renderer.shadowMap.type = THREE.PCFSoftShadowMap;
             renderer.outputEncoding = THREE.sRGBEncoding;
             renderer.toneMapping = THREE.ACESFilmicToneMapping;
-            renderer.toneMappingExposure = 1.0;
+            renderer.toneMappingExposure = 1.5;
             renderer.physicallyCorrectLights = true;
             
             document.getElementById('container').appendChild(renderer.domElement);
@@ -201,12 +201,33 @@
                             child.castShadow = true;
                             child.receiveShadow = true;
                             
-                            // Enhance material properties
+                            // Enhance material properties - SU GİBİ METALIK VE ŞEFFAF
                             if (child.material) {
-                                child.material.envMapIntensity = 1;
+                                // BLENDER GİBİ METALIK VE PÜRÜZLÜLÜK
+                                child.material.metalness = 1.0;
+                                child.material.roughness = 0.314;
+                                
+                                // ÇOK GÜÇLÜ YANSIMA
+                                child.material.envMapIntensity = 4.0;
+                                
+                                // ŞEFFAFLIK - SU GİBİ OPAK DEĞİL
+                                child.material.transparent = true;
+                                child.material.opacity = 0.889;
+                                
+                                // YANSITICILIK MAKSIMUM
+                                child.material.reflectivity = 1.0;
+                                child.material.refractionRatio = 0.98;
+                                
                                 if (child.material.map) {
                                     child.material.map.encoding = THREE.sRGBEncoding;
+                                    child.material.map.anisotropy = renderer.capabilities.getMaxAnisotropy();
                                 }
+                                
+                                // DAHA PARLAK VE CANLI
+                                child.material.emissive = new THREE.Color(0x0a0a15);
+                                child.material.emissiveIntensity = 0.15;
+                                
+                                child.material.needsUpdate = true;
                             }
                         }
                     });
