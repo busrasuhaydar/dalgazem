@@ -111,42 +111,52 @@
             // Handle window resize
             window.addEventListener('resize', onWindowResize, false);
         }
-        
+
         function setupLighting() {
-            // Ambient light for overall illumination
-            const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
+            // Ambient light for general brightness
+            const ambientLight = new THREE.AmbientLight(0x88aaff, 1.2);
             scene.add(ambientLight);
-            
-            // Main directional light (key light)
-            const directionalLight = new THREE.DirectionalLight(0xffffff, 1.0);
-            directionalLight.position.set(5, 5, 5);
+
+            // Main directional light (strong sunlight feel)
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 2.5);
+            directionalLight.position.set(10, 20, 10);
             directionalLight.castShadow = true;
-            directionalLight.shadow.mapSize.width = 2048;
-            directionalLight.shadow.mapSize.height = 2048;
+            directionalLight.shadow.mapSize.width = 4096;
+            directionalLight.shadow.mapSize.height = 4096;
             directionalLight.shadow.camera.near = 0.1;
-            directionalLight.shadow.camera.far = 20;
-            directionalLight.shadow.camera.left = -10;
-            directionalLight.shadow.camera.right = 10;
-            directionalLight.shadow.camera.top = 10;
-            directionalLight.shadow.camera.bottom = -10;
+            directionalLight.shadow.camera.far = 100;
             scene.add(directionalLight);
-            
-            // Fill light from opposite side
-            const fillLight = new THREE.DirectionalLight(0x6699ff, 0.5);
-            fillLight.position.set(-5, 3, -5);
-            scene.add(fillLight);
-            
-            // Back light for rim lighting effect
-            const backLight = new THREE.DirectionalLight(0xffffff, 0.3);
-            backLight.position.set(0, 5, -5);
-            scene.add(backLight);
-            
-            // Environment map for realistic reflections
-            const pmremGenerator = new THREE.PMREMGenerator(renderer);
-            pmremGenerator.compileEquirectangularShader();
-            scene.environment = pmremGenerator.fromScene(new THREE.Scene()).texture;
+
+            // Multiple PointLights around the scene for ocean shimmer effect
+            const pointLights = [
+                { color: 0x99ccff, intensity: 2.0, distance: 30, position: [5, 5, 5] },
+                { color: 0xffffff, intensity: 1.8, distance: 30, position: [-5, 5, -5] },
+                { color: 0x88bbff, intensity: 2.2, distance: 40, position: [0, 10, 0] },
+                { color: 0xaaccff, intensity: 1.5, distance: 25, position: [8, 3, -5] },
+                { color: 0xffffff, intensity: 1.3, distance: 20, position: [-8, 4, 5] },
+            ];
+
+            pointLights.forEach(l => {
+                const pl = new THREE.PointLight(l.color, l.intensity, l.distance);
+                pl.position.set(...l.position);
+                pl.castShadow = true;
+                scene.add(pl);
+            });
+
+            // Soft hemispheric light (sky + underwater tone)
+            const hemiLight = new THREE.HemisphereLight(0x99bbff, 0x003366, 1.0);
+            scene.add(hemiLight);
+
+            // Boost brightness and HDR tonemapping
+            renderer.toneMappingExposure = 1.8;
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            renderer.outputEncoding = THREE.sRGBEncoding;
+
+            // Subtle fog for depth
+            scene.fog = new THREE.FogExp2(0x0f1e3a, 0.02);
         }
-        
+
         function loadModel() {
             const loader = new THREE.GLTFLoader();
             
@@ -158,15 +168,14 @@
                     model = gltf.scene;
                     scene.add(model);
                     
-                    // Enable shadows
+                    // Enable shadows and enhance materials
                     model.traverse(function (child) {
                         if (child.isMesh) {
                             child.castShadow = true;
                             child.receiveShadow = true;
                             
-                            // Enhance material properties
                             if (child.material) {
-                                child.material.envMapIntensity = 1;
+                                child.material.envMapIntensity = 1.5;
                                 if (child.material.map) {
                                     child.material.map.encoding = THREE.sRGBEncoding;
                                 }
@@ -184,7 +193,6 @@
                         });
                     }
                     
-                    // Auto-fit model to camera view
                     fitModelToCamera();
                 },
                 function (progress) {
@@ -202,12 +210,10 @@
             const center = box.getCenter(new THREE.Vector3());
             const size = box.getSize(new THREE.Vector3());
             
-            // Center the model
             model.position.x = -center.x;
             model.position.y = -center.y;
             model.position.z = -center.z;
             
-            // Adjust camera position based on model size
             const maxDim = Math.max(size.x, size.y, size.z);
             const fitHeightDistance = maxDim / (2 * Math.atan(Math.PI * camera.fov / 360));
             const fitWidthDistance = fitHeightDistance / camera.aspect;
@@ -216,7 +222,6 @@
             camera.position.set(distance, distance * 0.5, distance);
             camera.lookAt(0, 0, 0);
             
-            // Update controls
             controls.target.set(0, 0, 0);
             controls.maxDistance = distance * 3;
             controls.update();
@@ -238,20 +243,11 @@
         
         function animate() {
             requestAnimationFrame(animate);
-            
-            // Update controls
             controls.update();
-            
-            // Update animations
-            if (mixer) {
-                mixer.update(0.016); // 60 FPS
-            }
-            
-            // Render
+            if (mixer) mixer.update(0.016);
             renderer.render(scene, camera);
         }
         
-        // Initialize everything
         init();
         animate();
     </script>
